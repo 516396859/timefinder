@@ -1,4 +1,4 @@
-module github.com/DanPlayer/timefinder/v2
+module github.com/516396859/timefinder/v2
 
 go 1.16
 
