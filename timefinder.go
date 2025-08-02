@@ -161,12 +161,14 @@ func parseDatetime(msg string) (parseTime time.Time) {
 		"([0-9零一二两三四五六七八九十]+年)?" +
 		"([0-9一二两三四五六七八九十]+(?:个月|月))?" +
 		"([0-9一二两三四五六七八九十]+[天号日])?" +
+		"([0-9零一二三四五六七八九十百]+(?:星期|周|礼拜|个星期|个礼拜))?" +
+		"((?:这周|这个周|本周|下周|下下周|上周|上上周|这星期|这个星期|下个星期|下下个星期|上个星期|上上个星期|这礼拜|这个礼拜|下个礼拜|下下个礼拜|上个礼拜|上上个礼拜|周|星期|礼拜)[1-7一二三四五六七日])?" +
 		"(上午|中午|下午|晚上|晚|早上|早|凌晨｜傍晚)?" +
 		"([0-9零一二两三四五六七八九十百]+(?:[点\\.时]|个小时|小时))?" +
 		"([0-9零一二三四五六七八九十百]+分)?" +
 		"([0-9零一二三四五六七八九十百]+秒)?" +
-		"([0-9零一二三四五六七八九十百]+(?:星期|周|礼拜|个星期|个礼拜))?" +
-		"((?:这周|这个周|本周|下周|下下周|上周|上上周|这星期|这个星期|下个星期|下下个星期|上个星期|上上个星期|这礼拜|这个礼拜|下个礼拜|下下个礼拜|上个礼拜|上上个礼拜|周|星期|礼拜)[1-7一二三四五六七日])?" +
+		//"([0-9零一二三四五六七八九十百]+(?:星期|周|礼拜|个星期|个礼拜))?" +
+		//"((?:这周|这个周|本周|下周|下下周|上周|上上周|这星期|这个星期|下个星期|下下个星期|上个星期|上上个星期|这礼拜|这个礼拜|下个礼拜|下下个礼拜|上个礼拜|上上个礼拜|周|星期|礼拜)[1-7一二三四五六七日])?" +
 		"([0-9零一二两三四五六七八九十百]+:[0-9零一二两三四五六七八九十百]+(?::[0-9零一二两三四五六七八九十百])?)?")
 
 	if err != nil {
@@ -194,23 +196,28 @@ func parseDatetime(msg string) (parseTime time.Time) {
 	month := allMatched[2]
 	day := allMatched[3]
 	hour := "00"
-	if len(allMatched[5]) > 0 {
-		hour = allMatched[5]
+	if len(allMatched[7]) > 0 {
+		hour = allMatched[7]
 	}
 	minute := "00"
-	if len(allMatched[6]) > 0 {
-		minute = allMatched[6]
+	if len(allMatched[8]) > 0 {
+		minute = allMatched[8]
 	}
 	// 增加对时半的支持
 	if minute == "00" && strings.Contains(msg, hour+"半") {
 		minute = "30"
 	}
+
 	second := "00"
-	if len(allMatched[7]) > 0 {
-		second = allMatched[7]
+	if len(allMatched[9]) > 0 {
+		second = allMatched[9]
 	}
-	week := allMatched[8]
-	weekday := allMatched[9]
+
+	//0  1  2  3  4   5   6   7  8  9  10
+	//空 年 月 日 星期  周 上午 小时 分 秒 数
+
+	week := allMatched[4]
+	weekday := allMatched[5]
 
 	if len(allMatched[10]) > 0 {
 		matched10 := strings.Split(allMatched[10], ":")
@@ -231,11 +238,11 @@ func parseDatetime(msg string) (parseTime time.Time) {
 		"year":    year,
 		"month":   month,
 		"day":     day,
+		"week":    week,
+		"weekday": weekday,
 		"hour":    hour,
 		"minute":  minute,
 		"second":  second,
-		"week":    week,
-		"weekday": weekday,
 	}
 
 	params := make(map[string]int)
@@ -259,28 +266,29 @@ func parseDatetime(msg string) (parseTime time.Time) {
 	now := time.Now()
 	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
-	nowUnix := midnight.Unix()
+	nowUnix := now.Unix()
+	midnightUnix := midnight.Unix()
 	if len(direction) > 0 {
 		for k, v := range params {
 			if k == "year" && v > 0 {
 				if direction == "前" {
-					nowUnix = midnight.AddDate(-v, 0, 0).Unix()
+					nowUnix = now.AddDate(-v, 0, 0).Unix()
 				} else {
-					nowUnix = midnight.AddDate(v, 0, 0).Unix()
+					nowUnix = now.AddDate(v, 0, 0).Unix()
 				}
 			}
 			if k == "month" && v > 0 {
 				if direction == "前" {
-					nowUnix = midnight.AddDate(0, -v, 0).Unix()
+					nowUnix = now.AddDate(0, -v, 0).Unix()
 				} else {
-					nowUnix = midnight.AddDate(0, v, 0).Unix()
+					nowUnix = now.AddDate(0, v, 0).Unix()
 				}
 			}
 			if k == "day" && v > 0 {
 				if direction == "前" {
-					nowUnix = midnight.AddDate(0, 0, -v).Unix()
+					nowUnix = now.AddDate(0, 0, -v).Unix()
 				} else {
-					nowUnix = midnight.AddDate(0, 0, v).Unix()
+					nowUnix = now.AddDate(0, 0, v).Unix()
 				}
 			}
 			if k == "hour" && v > 0 {
@@ -306,27 +314,62 @@ func parseDatetime(msg string) (parseTime time.Time) {
 			}
 			if k == "week" && v > 0 {
 				if direction == "前" {
-					nowUnix = midnight.AddDate(0, 0, -(v * 7)).Unix()
+					nowUnix = now.AddDate(0, 0, -(v * 7)).Unix()
 				} else {
-					nowUnix = midnight.AddDate(0, 0, v*7).Unix()
+					nowUnix = now.AddDate(0, 0, v*7).Unix()
 				}
 			}
 		}
 		targetDate = time.Unix(nowUnix, 0).Format(timeFormat)
-	} else if params["weekday"] != 0 {
-		nowUnix = midnight.AddDate(0, 0, params["weekday"]).Unix()
-		targetDate = time.Unix(nowUnix, 0).Format(timeFormat)
 	} else {
-		// 需要在today的基础上修正replace
-		targetDate = ternaryTime(params["year"], midnight.Year()) + "-" +
-			ternaryTime(params["month"], int(midnight.Month())) + "-" +
-			ternaryTime(params["day"], midnight.Day()) + " " +
-			ternaryTime(params["hour"], 0) + ":" +
-			ternaryTime(params["minute"], 0) + ":" +
-			ternaryTime(params["second"], 0)
+
+		if params["year"] != 0 {
+			midnightUnix = midnight.AddDate(params["year"]-midnight.Year(), 0, 0).Unix()
+			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
+		}
+
+		if params["month"] != 0 {
+			midnightUnix = midnight.AddDate(0, params["month"]-int(midnight.Month()), 0).Unix()
+			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
+		}
+
+		if params["day"] != 0 {
+			midnightUnix = midnight.AddDate(0, 0, params["day"]-midnight.Day()).Unix()
+			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
+		}
+
+		if params["weekday"] != 0 {
+			midnightUnix = midnight.AddDate(0, 0, params["weekday"]).Unix()
+			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
+		}
+
+		if params["hour"] != 0 {
+			midnightUnix = midnight.AddDate(0, 0, 0).Add(time.Duration(params["hour"]) * time.Hour).Unix()
+			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
+		}
+
+		if params["minute"] != 0 {
+			midnightUnix = midnight.AddDate(0, 0, 0).Add(time.Duration(params["minute"]) * time.Minute).Unix()
+			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
+		}
+
+		if params["second"] != 0 {
+			midnightUnix = midnight.AddDate(0, 0, 0).Add(time.Duration(params["second"]) * time.Second).Unix()
+			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
+		} else {
+			targetDate = ternaryTime(params["year"], midnight.Year()) + "-" +
+				ternaryTime(params["month"], int(midnight.Month())) + "-" +
+				ternaryTime(params["day"], midnight.Day()) + " " +
+				ternaryTime(params["hour"], 0) + ":" +
+				ternaryTime(params["minute"], 0) + ":" +
+				ternaryTime(params["second"], 0)
+		}
 	}
 
-	isPm := allMatched[4]
+	//0  1  2  3  4   5   6   7  8  9  10
+	//空 年 月 日 星期  周 上午 小时 分 秒 数
+
+	isPm := allMatched[6]
 	if len(isPm) > 0 {
 		if isPm == "下午" || isPm == "晚上" || isPm == "中午" || isPm == "傍晚" {
 			parse, err := time.Parse(timeFormat, targetDate)
@@ -432,6 +475,7 @@ func (tf *TimeFinder) TimeExtract(text string) (finalRes []time.Time) {
 
 	str := sego.SegmentsToString(segments, false)
 	fmt.Println(str)
+
 	for _, tag := range segments {
 		k := tag.Token().Text()
 		v := tag.Token().Pos()

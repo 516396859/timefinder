@@ -10,18 +10,45 @@ import (
 const timeFormat = "2006-01-02 15:04:05"
 
 func TestAny(t *testing.T) {
-	var msg string
-	var extract []time.Time
-
 	segmenter := timefinder.New("../jieba_dict.txt", "../dictionary.txt")
-	//msg = "明天下午14时5分"
-	msg = "周一下午"
-	extract = segmenter.TimeExtract(msg)
 
+	//"昨天凌晨2点"
+
+	var msg = "一个小时后提醒我喝水"
+	nlpTransferDate(msg, segmenter)
+
+	msg = "周日19点"
+	nlpTransferDate(msg, segmenter)
+
+	msg = "周日下午2点半"
+	nlpTransferDate(msg, segmenter)
+
+	msg = "周日下午18点"
+	nlpTransferDate(msg, segmenter)
+
+	msg = "19号下午9点"
+	nlpTransferDate(msg, segmenter)
+
+	msg = "下个月16号上午9点"
+	nlpTransferDate(msg, segmenter)
+
+	msg = "下周三晚上9点"
+	nlpTransferDate(msg, segmenter)
+
+	msg = "下个月第三周上午7点"
+	nlpTransferDate(msg, segmenter)
+
+	msg = "下个月8号"
+	nlpTransferDate(msg, segmenter)
+
+}
+
+func nlpTransferDate(msg string, segmenter *timefinder.TimeFinder) {
+	var extract []time.Time
+	extract = segmenter.TimeExtract(msg)
 	fmt.Println()
 	fmt.Println(msg)
 	fmt.Println(extract[0].Format(timeFormat))
-
 }
 
 func TestTimeFinder(t *testing.T) {
