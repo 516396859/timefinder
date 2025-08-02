@@ -2,9 +2,10 @@ package tests
 
 import (
 	"fmt"
-	"github.com/DanPlayer/timefinder"
 	"testing"
 	"time"
+
+	"github.com/DanPlayer/timefinder"
 )
 
 const timeFormat = "2006-01-02 15:04:05"
@@ -12,7 +13,8 @@ const timeFormat = "2006-01-02 15:04:05"
 func TestAny(t *testing.T) {
 	segmenter := timefinder.New("../jieba_dict.txt", "../dictionary.txt")
 
-	//"昨天凌晨2点"
+	//var msg = "下个月8日"
+	//nlpTransferDate(msg, segmenter)
 
 	var msg = "下周三晚上9点"
 	nlpTransferDate(msg, segmenter)
@@ -38,7 +40,7 @@ func TestAny(t *testing.T) {
 	msg = "下周三晚上9点"
 	nlpTransferDate(msg, segmenter)
 
-	msg = "下个月第三周上午7点"
+	msg = "下个月上午17点"
 	nlpTransferDate(msg, segmenter)
 
 	msg = "下个月8号"
