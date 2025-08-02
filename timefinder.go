@@ -144,7 +144,7 @@ func weekday2dig(weekday string) (rsl int) {
 		}
 	}
 
-	return
+	return rsl
 }
 
 // parseDatetime 函数，用以将每个提取到的文本日期串进行时间转换。
@@ -216,8 +216,8 @@ func parseDatetime(msg string) (parseTime time.Time) {
 	//0  1  2  3    4       5    6    7    8  9  10
 	//空 年 月 日 weekday  week  上午  小时  分  秒 数
 
-	week := allMatched[5]
-	weekday := allMatched[4]
+	week := allMatched[4]
+	weekday := allMatched[5]
 
 	if len(allMatched[10]) > 0 {
 		matched10 := strings.Split(allMatched[10], ":")
@@ -265,6 +265,13 @@ func parseDatetime(msg string) (parseTime time.Time) {
 	// 获取今天的凌晨时间 (00:00:00)
 	now := time.Now()
 	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	targetDate = ternaryTime(params["year"], midnight.Year()) + "-" +
+		ternaryTime(params["month"], int(midnight.Month())) + "-" +
+		ternaryTime(params["day"], midnight.Day()) + " " +
+		ternaryTime(params["hour"], 0) + ":" +
+		ternaryTime(params["minute"], 0) + ":" +
+		ternaryTime(params["second"], 0)
 
 	nowUnix := now.Unix()
 	midnightUnix := midnight.Unix()
@@ -322,47 +329,51 @@ func parseDatetime(msg string) (parseTime time.Time) {
 		}
 		targetDate = time.Unix(nowUnix, 0).Format(timeFormat)
 	} else {
+		// 创建一个基于midnight的时间变量，用于累积修改
+		currentTime := midnight
 
-		if params["year"] != 0 {
-			midnightUnix = midnight.AddDate(params["year"]-midnight.Year(), 0, 0).Unix()
+		if params["year"] != -1 {
+			currentTime = currentTime.AddDate(params["year"]-midnight.Year(), 0, 0)
+			midnightUnix = currentTime.Unix()
 			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
 		}
 
-		if params["month"] != 0 {
-			midnightUnix = midnight.AddDate(0, params["month"]-int(midnight.Month()), 0).Unix()
+		if params["month"] != -1 {
+			// 计算月份差值时，使用当前年份作为基准
+			currentTime = currentTime.AddDate(0, params["month"]-int(currentTime.Month()), 0)
+			midnightUnix = currentTime.Unix()
 			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
 		}
 
-		if params["day"] != 0 {
-			midnightUnix = midnight.AddDate(0, 0, params["day"]-midnight.Day()).Unix()
+		if params["day"] != -1 {
+			// 计算日期差值时，使用当前月份作为基准
+			currentTime = currentTime.AddDate(0, 0, params["day"]-currentTime.Day())
+			midnightUnix = currentTime.Unix()
 			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
 		}
 
-		if params["weekday"] != 0 {
-			midnightUnix = midnight.AddDate(0, 0, params["weekday"]).Unix()
+		if params["weekday"] != -1 {
+			currentTime = currentTime.AddDate(0, 0, params["weekday"])
+			midnightUnix = currentTime.Unix()
 			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
 		}
 
 		if params["hour"] != 0 {
-			midnightUnix = midnight.AddDate(0, 0, 0).Add(time.Duration(params["hour"]) * time.Hour).Unix()
+			currentTime = currentTime.Add(time.Duration(params["hour"]) * time.Hour)
+			midnightUnix = currentTime.Unix()
 			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
 		}
 
 		if params["minute"] != 0 {
-			midnightUnix = midnight.AddDate(0, 0, 0).Add(time.Duration(params["minute"]) * time.Minute).Unix()
+			currentTime = currentTime.Add(time.Duration(params["minute"]) * time.Minute)
+			midnightUnix = currentTime.Unix()
 			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
 		}
 
 		if params["second"] != 0 {
-			midnightUnix = midnight.AddDate(0, 0, 0).Add(time.Duration(params["second"]) * time.Second).Unix()
+			currentTime = currentTime.Add(time.Duration(params["second"]) * time.Second)
+			midnightUnix = currentTime.Unix()
 			targetDate = time.Unix(midnightUnix, 0).Format(timeFormat)
-		} else {
-			targetDate = ternaryTime(params["year"], midnight.Year()) + "-" +
-				ternaryTime(params["month"], int(midnight.Month())) + "-" +
-				ternaryTime(params["day"], midnight.Day()) + " " +
-				ternaryTime(params["hour"], 0) + ":" +
-				ternaryTime(params["minute"], 0) + ":" +
-				ternaryTime(params["second"], 0)
 		}
 	}
 
