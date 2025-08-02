@@ -2,7 +2,6 @@ package timefinder
 
 import (
 	"fmt"
-	"github.com/huichen/sego"
 	"path"
 	"regexp"
 	"runtime"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/huichen/sego"
 )
 
 type TimeFinder struct {
@@ -160,13 +161,14 @@ func parseDatetime(msg string) (parseTime time.Time) {
 		"([0-9零一二两三四五六七八九十]+年)?" +
 		"([0-9一二两三四五六七八九十]+(?:个月|月))?" +
 		"([0-9一二两三四五六七八九十]+[天号日])?" +
-		"(上午|中午|下午|晚上|晚|早上|早|凌晨)?" +
+		"(上午|中午|下午|晚上|晚|早上|早|凌晨｜傍晚)?" +
 		"([0-9零一二两三四五六七八九十百]+(?:[点\\.时]|个小时|小时))?" +
 		"([0-9零一二三四五六七八九十百]+分)?" +
 		"([0-9零一二三四五六七八九十百]+秒)?" +
 		"([0-9零一二三四五六七八九十百]+(?:星期|周|礼拜|个星期|个礼拜))?" +
 		"((?:这周|这个周|本周|下周|下下周|上周|上上周|这星期|这个星期|下个星期|下下个星期|上个星期|上上个星期|这礼拜|这个礼拜|下个礼拜|下下个礼拜|上个礼拜|上上个礼拜|周|星期|礼拜)[1-7一二三四五六七日])?" +
 		"([0-9零一二两三四五六七八九十百]+:[0-9零一二两三四五六七八九十百]+(?::[0-9零一二两三四五六七八九十百])?)?")
+
 	if err != nil {
 		return
 	}
@@ -200,7 +202,7 @@ func parseDatetime(msg string) (parseTime time.Time) {
 		minute = allMatched[6]
 	}
 	// 增加对时半的支持
-	if minute == "00" && strings.Contains(msg, hour + "半") {
+	if minute == "00" && strings.Contains(msg, hour+"半") {
 		minute = "30"
 	}
 	second := "00"
@@ -253,29 +255,32 @@ func parseDatetime(msg string) (parseTime time.Time) {
 		}
 		params[k] = tmp
 	}
+	// 获取今天的凌晨时间 (00:00:00)
 	now := time.Now()
-	nowUnix := now.Unix()
+	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	nowUnix := midnight.Unix()
 	if len(direction) > 0 {
 		for k, v := range params {
 			if k == "year" && v > 0 {
 				if direction == "前" {
-					nowUnix = now.AddDate(-v, 0, 0).Unix()
+					nowUnix = midnight.AddDate(-v, 0, 0).Unix()
 				} else {
-					nowUnix = now.AddDate(v, 0, 0).Unix()
+					nowUnix = midnight.AddDate(v, 0, 0).Unix()
 				}
 			}
 			if k == "month" && v > 0 {
 				if direction == "前" {
-					nowUnix = now.AddDate(0, -v, 0).Unix()
+					nowUnix = midnight.AddDate(0, -v, 0).Unix()
 				} else {
-					nowUnix = now.AddDate(0, v, 0).Unix()
+					nowUnix = midnight.AddDate(0, v, 0).Unix()
 				}
 			}
 			if k == "day" && v > 0 {
 				if direction == "前" {
-					nowUnix = now.AddDate(0, 0, -v).Unix()
+					nowUnix = midnight.AddDate(0, 0, -v).Unix()
 				} else {
-					nowUnix = now.AddDate(0, 0, v).Unix()
+					nowUnix = midnight.AddDate(0, 0, v).Unix()
 				}
 			}
 			if k == "hour" && v > 0 {
@@ -301,32 +306,52 @@ func parseDatetime(msg string) (parseTime time.Time) {
 			}
 			if k == "week" && v > 0 {
 				if direction == "前" {
-					nowUnix = now.AddDate(0, 0, -(v * 7)).Unix()
+					nowUnix = midnight.AddDate(0, 0, -(v * 7)).Unix()
 				} else {
-					nowUnix = now.AddDate(0, 0, v*7).Unix()
+					nowUnix = midnight.AddDate(0, 0, v*7).Unix()
 				}
 			}
 		}
 		targetDate = time.Unix(nowUnix, 0).Format(timeFormat)
 	} else if params["weekday"] != 0 {
-		nowUnix = now.AddDate(0, 0, params["weekday"]).Unix()
+		nowUnix = midnight.AddDate(0, 0, params["weekday"]).Unix()
 		targetDate = time.Unix(nowUnix, 0).Format(timeFormat)
 	} else {
 		// 需要在today的基础上修正replace
-		targetDate = ternaryTime(params["year"], now.Year()) + "-" +
-			ternaryTime(params["month"], int(now.Month())) + "-" +
-			ternaryTime(params["day"], now.Day()) + " " +
-			ternaryTime(params["hour"], now.Hour()) + ":" +
-			ternaryTime(params["minute"], now.Minute()) + ":" +
-			ternaryTime(params["second"], now.Second())
+		targetDate = ternaryTime(params["year"], midnight.Year()) + "-" +
+			ternaryTime(params["month"], int(midnight.Month())) + "-" +
+			ternaryTime(params["day"], midnight.Day()) + " " +
+			ternaryTime(params["hour"], 0) + ":" +
+			ternaryTime(params["minute"], 0) + ":" +
+			ternaryTime(params["second"], 0)
 	}
 
 	isPm := allMatched[4]
 	if len(isPm) > 0 {
-		if isPm == "下午" || isPm == "晚上" || isPm == "中午" {
+		if isPm == "下午" || isPm == "晚上" || isPm == "中午" || isPm == "傍晚" {
 			parse, err := time.Parse(timeFormat, targetDate)
 			if err != nil {
 				return
+			}
+
+			if parse.Hour() == 0 && parse.Minute() == 0 && parse.Second() == 0 {
+				switch isPm {
+				case "下午":
+					parse = parse.Add(3 * 60 * 60 * time.Second)
+				case "晚上":
+					parse = parse.Add(8 * 60 * 60 * time.Second)
+				case "傍晚":
+					parse = parse.Add(6 * 60 * 60 * time.Second)
+				}
+
+				if parse.Hour() < 12 {
+					parse = parse.Add(60 * 60 * 12 * time.Second)
+				}
+				targetDate = parse.Format(timeFormat)
+			}
+
+			if parse.Hour() == 0 && parse.Minute() == 0 && parse.Second() == 0 {
+				parse = parse.Add(8 * 60 * 60 * time.Second)
 			}
 
 			if parse.Hour() < 12 {
@@ -405,8 +430,8 @@ func (tf *TimeFinder) TimeExtract(text string) (finalRes []time.Time) {
 	// 分词
 	segments := tf.Segmenter.Segment([]byte(text))
 
-	//str := sego.SegmentsToString(segments, false)
-	//fmt.Println(str)
+	str := sego.SegmentsToString(segments, false)
+	fmt.Println(str)
 	for _, tag := range segments {
 		k := tag.Token().Text()
 		v := tag.Token().Pos()
@@ -463,6 +488,8 @@ func (tf *TimeFinder) TimeExtract(text string) (finalRes []time.Time) {
 			result = append(result, valid)
 		}
 	}
+
+	fmt.Println(result)
 
 	for _, ele := range result {
 		if !parseDatetime(ele).IsZero() {

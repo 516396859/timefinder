@@ -9,6 +9,21 @@ import (
 
 const timeFormat = "2006-01-02 15:04:05"
 
+func TestAny(t *testing.T) {
+	var msg string
+	var extract []time.Time
+
+	segmenter := timefinder.New("../jieba_dict.txt", "../dictionary.txt")
+	//msg = "明天下午14时5分"
+	msg = "周一下午"
+	extract = segmenter.TimeExtract(msg)
+
+	fmt.Println()
+	fmt.Println(msg)
+	fmt.Println(extract[0].Format(timeFormat))
+
+}
+
 func TestTimeFinder(t *testing.T) {
 	var msg string
 	var extract []time.Time
@@ -166,7 +181,7 @@ func TestSpecialWeek(t *testing.T) {
 	fmt.Println("end tests")
 }
 
-func TestWeekDay(t *testing.T)  {
+func TestWeekDay(t *testing.T) {
 	var msg string
 	var extract []time.Time
 
