@@ -213,11 +213,11 @@ func parseDatetime(msg string) (parseTime time.Time) {
 		second = allMatched[9]
 	}
 
-	//0  1  2  3  4   5   6   7  8  9  10
-	//空 年 月 日 星期  周 上午 小时 分 秒 数
+	//0  1  2  3    4       5    6    7    8  9  10
+	//空 年 月 日 weekday  week  上午  小时  分  秒 数
 
-	week := allMatched[4]
-	weekday := allMatched[5]
+	week := allMatched[5]
+	weekday := allMatched[4]
 
 	if len(allMatched[10]) > 0 {
 		matched10 := strings.Split(allMatched[10], ":")
@@ -473,8 +473,8 @@ func (tf *TimeFinder) TimeExtract(text string) (finalRes []time.Time) {
 	// 分词
 	segments := tf.Segmenter.Segment([]byte(text))
 
-	str := sego.SegmentsToString(segments, false)
-	fmt.Println(str)
+	//str := sego.SegmentsToString(segments, false)
+	//fmt.Println(str)
 
 	for _, tag := range segments {
 		k := tag.Token().Text()

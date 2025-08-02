@@ -14,7 +14,10 @@ func TestAny(t *testing.T) {
 
 	//"昨天凌晨2点"
 
-	var msg = "一个小时后提醒我喝水"
+	var msg = "下周三晚上9点"
+	nlpTransferDate(msg, segmenter)
+
+	msg = "一个小时后提醒我喝水"
 	nlpTransferDate(msg, segmenter)
 
 	msg = "周日19点"
