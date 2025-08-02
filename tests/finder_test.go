@@ -2,10 +2,9 @@ package tests
 
 import (
 	"fmt"
+	"github.com/516396859/timefinder/v2"
 	"testing"
 	"time"
-
-	"github.com/DanPlayer/timefinder"
 )
 
 const timeFormat = "2006-01-02 15:04:05"
